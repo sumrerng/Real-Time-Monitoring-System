@@ -20,6 +20,9 @@ MQTT_PORT = int(os.environ.get('MQTT_PORT', 1883))
 MQTT_USERNAME = os.environ.get('MQTT_USERNAME')
 MQTT_ACCESS_KEY = os.environ.get('MQTT_ACCESS_KEY')
 
+# ดึงค่า MAPBOX_ACCESS_TOKEN สำหรับแสดงแผนที่
+MAPBOX_ACCESS_TOKEN = os.environ.get('MAPBOX_ACCESS_TOKEN')
+
 # สร้าง client MQTT
 client = mqtt.Client(client_id="myClientID", protocol=mqtt.MQTTv311)
 client.username_pw_set(username=MQTT_USERNAME, password=MQTT_ACCESS_KEY)
@@ -27,6 +30,7 @@ client.username_pw_set(username=MQTT_USERNAME, password=MQTT_ACCESS_KEY)
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("Connected successfully")
+        # ตัวอย่าง: subscribe topic บน The Things Network
         client.subscribe("v3/smartdevice-physics@ttn/devices/my-tracker01/up")
     else:
         print(f"Failed to connect, return code {rc}")
@@ -44,7 +48,7 @@ def on_message(client, userdata, msg):
                 'spo2': decoded.get("spo2", 0)
             }
             print(f"Received data: {data}")
-            # ส่งข้อมูลแบบ real-time ไปยัง client
+            # ส่งข้อมูลแบบ real-time ไปยัง client (หน้าเว็บ) ผ่าน Socket.IO
             socketio.emit('new_location', data)
         else:
             print("Error: Missing uplink_message or decoded_payload.")
@@ -58,7 +62,9 @@ client.loop_start()
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # ส่งค่า mapbox_token ไปยัง index.html
+    return render_template('index.html', mapbox_token=MAPBOX_ACCESS_TOKEN)
 
 if __name__ == '__main__':
+    # เปิดใช้งานแอป Flask ร่วมกับ SocketIO
     socketio.run(app, debug=True, port=5001)
